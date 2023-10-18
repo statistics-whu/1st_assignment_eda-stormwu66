@@ -1,7 +1,9 @@
 ---
 title: "第一次作业你的报告题目"
-CJKmainfont: Songti SC
-author: "your name"
+#CJKmainfont: Songti SC
+# showtext包 font_all <- font_files() view(font_all) 查找对应 中文字体
+CJKmainfont: SimSun
+author: "吴晗"
 date: "`r Sys.Date()`"
 output:
   pdf_document:
@@ -17,52 +19,75 @@ output:
     theme: cosmo
     toc: yes
 ---
+
 ```{r setup, include = FALSE,echo = FALSE}
 knitr::opts_chunk$set(echo = FALSE,error = FALSE, warning = FALSE, message = FALSE,
                       out.width = "100%", split = FALSE, fig.align = "center")
 #load library
+library(rmarkdown)
 library(tidyverse)
-library(kableExtra)
+
 library(lubridate)
 library(scales)
 library(plotly)
 library(patchwork)
 library(ggrepel)
+#remove.packages('kableExtra')
+#install.packages('devtools')
+#devtools::install_github("kupietz/kableExtra") 不然版本不一致会报错
+library(kableExtra)
+library(showtext)
+
 ```
 
 # 你的主要发现
 
-1. 发现1
+1.  从小区上看 东立国际小区 在售二手房最多，从地区上看 白沙洲地区 在售二手房最多
 
-1. 发现2
-  
-1. 发现3
-    
+2.  从房屋总价和房屋面积上看，房屋总价和面积总体是正比例增长，但也有短暂下降，例如白沙洲
+
+3.  从地区与房屋单价上看，光谷东的房屋单价 跨度最广 普遍比其他要高 青山有高异常房屋单价
 
 # 数据介绍
 
 本报告**链家**数据获取方式如下：
-    
-报告人在2023年9月12日获取了[链家武汉二手房网站](https://wh.lianjia.com/ershoufang/)数据。
-    
-- 链家二手房网站默认显示100页，每页30套房产，因此本数据包括3000套房产信息；
-    
-- 数据包括了页面可见部分的文本信息，具体字段及说明见作业说明。
 
- **说明：**数据仅用于教学；由于不清楚链家数据的展示规则，因此数据可能并不是武汉二手房市场的随机抽样，结论很可能有很大的偏差，甚至可能是错误的。
-    
+报告人在2023年9月12日获取了[链家武汉二手房网站](https://wh.lianjia.com/ershoufang/)数据。
+
+-   链家二手房网站默认显示100页，每页30套房产，因此本数据包括3000套房产信息；
+
+-   数据包括了页面可见部分的文本信息，具体字段及说明见作业说明。
+
+**说明：**数据仅用于教学；由于不清楚链家数据的展示规则，因此数据可能并不是武汉二手房市场的随机抽样，结论很可能有很大的偏差，甚至可能是错误的。
+
 ```{r}
 # 载入数据和预处理
 
-lj<- read_csv("/Users/jameschen/Documents/02_Teaching/12_quantitative_thinking_R/data/2023-09-12_cleaned.csv")
+lj<- read_csv("data/2023-09-12_cleaned.csv")
 # EDA ---------------------------------------------------------------------
-
 ## 如下语句可以解决画图中的中文显示问题，当然你可以用showtext包来解决
-
-theme_set(theme(text = element_text(family="Songti SC",size = 10))) #这里family设置成你系统中的中文字体名。
+#R安装中文字体 需翻墙
+#font_install(source_han_serif("CN"))
+#font_installed()
+#sysfonts::font_families()
+#字体全局环境应用
+showtext_auto()
+#theme_set(theme(text = element_text(family="SimSun",size = 10))) #这里family设置成你系统中的中文字体名。
 
 # 做一些数据预处理，比如把字符型变成factor。
-
+lj$property_name <- factor(lj$property_name)
+lj$property_region <- factor(lj$property_region)
+lj$bedrooms <- factor(lj$bedrooms)
+lj$livingrooms <- factor(lj$livingrooms)
+lj$directions1 <- factor(lj$directions1)
+lj$directions2 <- factor(lj$directions2)
+lj$decoration <- factor(lj$decoration)
+lj$property_height <- factor(lj$property_height)
+lj$property_style <- factor(lj$property_style)
+lj$if_2y <- factor(lj$if_2y)
+lj$has_key <- factor(lj$has_key)
+lj$vr <- factor(lj$vr)
+lj$near_subway <- factor(lj$near_subway)
 ```
 
 # 数据概览
@@ -77,78 +102,108 @@ lj %>%
 ```
 
 各变量的简短信息：
+
 ```{r}
 glimpse(lj)
 ```
 
 各变量的简短统计：
+
 ```{r}
 summary(lj)
+#解决中文乱码
+#Sys.getlocale()
+#Sys.setlocale(category = "LC_ALL", locale = "en_US.UTF-8")
 ```
 
 可以看到：
 
-- 直观结论1
+-   房屋总价最小10.6万元，最大1380万元，中间值137万元，平方米价格最小1771元/平方米，最大44656元/平方米
 
-- 直观结论2
+-   房间卧室个数分布 3室最多 7室最少 客厅个数 2客厅最多 4客厅最小 总体面积 最小22.77 最大588.66
 
-- ...
+-   房间装修 精准最多 板楼最多 主要朝向南最多 次要朝向北最多 
 
 # 探索性分析
 
 ## 变量1的数值描述与图形
 
+```{r}
+#小区 分布情况
+property_name_data <- lj %>% group_by(property_name) %>% summarise(count = n()) %>% arrange(desc(count))
+property_name_data
+summary(property_name_data$count)
+
+property_region_data <- lj %>% group_by(property_region) %>% summarise(count = n()) %>% arrange(desc(count)) 
+property_region_data
+
+summary(property_region_data$count)
+# 选出总数前10的区域
+top10 <- property_region_data %>% filter(row_number() <= 10)
+```
+
 发现：
 
-- 发现1
+-   东立国际小区 在售二手房最多 22 最少小区仅一间二手房 大部分小区有1-3间二手房出售 平均每个小区有2.23间 
 
-- 发现2
+-   白沙洲地区 在售二手房最多 167 最少地区仅一间二手房 平均每个地区有34.48间 
 
 ## 变量2的数值描述与图形
 
-发现：
+```{r}
+top10_price <- lj %>% filter(property_region %in% top10$property_region)
+top10_price
 
-- 发现1
+ggplot(filter(top10_price,price_ttl < quantile(price_ttl,0.9)),aes(x = building_area,y = price_ttl)) + geom_smooth(na.rm = TRUE,aes(color=property_region),se = FALSE) 
 
-- 发现2
-
-## 变量...的数值描述与图形
-
-发现：
-
-- 发现1
-
-- 发现2
-
-## 探索问题1
+ggplot(filter(top10_price,price_ttl < quantile(price_ttl,0.9)),aes(x = building_area,y = price_ttl)) + geom_smooth(na.rm = TRUE) + facet_wrap(~ property_region,nrow = 3)
+```
 
 发现：
 
-- 发现1
+-   房屋总价和面积总体是正比例增长，但也有短暂下降，并不总是面积越大房价越高 例如白沙洲 地区二手房面积到达一定后 房价确不升反降 说明同一地区 除开房屋面积 还有其他因素对房价有影响
 
-- 发现2
+-   75平方米内相同面积房屋 后湖房屋总价最高 75往后 相同面积房屋 塔子湖的房屋总价最高
 
-## 探索问题2
+## 变量price_sqm的数值描述与图形
 
-发现：
-
-- 发现1
-
-- 发现2
-
-## 探索问题3
+```{r}
+# 选出总数前10的区域
+ggplot(top10_price,aes(x = property_region,y = price_sqm)) + geom_boxplot()
+```
 
 发现：
 
-- 发现1
+-   盘龙城房屋单价最低 中位数也是最低 金银湖第二低  光谷东的中位数 最高 其次是塔子湖
 
-- 发现2
+-   光谷东的房屋单价 跨度最多 普遍价格比其他要高 青山有高异常房屋单价
 
----
+## 探索问题 小区 地区 在售二手房分布趋势
+
+发现：
+
+-   东立国际小区 在售二手房最多 22 最少小区仅一间二手房 大部分小区有1-3间二手房出售 平均每个小区有2.23间 
+
+-   白沙洲地区 在售二手房最多 167 最少地区仅一间二手房 平均每个地区有34.48间 
+
+## 探索问题 不同地区 相同面积下 地区与房屋总价之间的关系
+
+发现：
+
+-   房屋总价和面积总体是正比例增长，但也有短暂下降，并不总是面积越大房价越高 例如白沙洲 地区二手房面积到达一定后 房价确不升反降 说明同一地区 除开房屋面积 还有其他因素对房价有影响
+
+-   75平方米内相同面积房屋 后湖房屋总价最高 75往后 相同面积房屋 塔子湖的房屋总价最高
+
+## 探索问题 不同地区 各自房屋单价走向
+
+发现：
+
+-   盘龙城房屋单价最低 中位数也是最低 金银湖第二低  光谷东的中位数 最高 其次是塔子湖
+
+-   光谷东的房屋单价 跨度最多 普遍价格比其他要高 青山有高异常房屋单价
+
+------------------------------------------------------------------------
 
 # 发现总结
 
-用1-3段话总结你的发现。
-
-
-
+二手房主要分布在白沙洲,盘龙城,四新,光谷东,金银湖,后湖,青山等地区。房屋总价和面积总体是正比例增长，但也有短暂下降，相同面积下，塔子湖房屋总价要高。不同地区，房屋单价分布不同，光谷东的房屋单价 跨度最多 普遍价格比其他要高 青山有高异常房屋单价。
