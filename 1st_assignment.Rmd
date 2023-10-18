@@ -1,5 +1,5 @@
 ---
-title: "第一次作业你的报告题目"
+title: "第一次作业 链家二手房数据分析"
 #CJKmainfont: Songti SC
 # showtext包 font_all <- font_files() view(font_all) 查找对应 中文字体
 CJKmainfont: SimSun
@@ -40,7 +40,7 @@ library(showtext)
 
 ```
 
-# 你的主要发现
+# 主要发现
 
 1.  从小区上看 东立国际小区 在售二手房最多，从地区上看 白沙洲地区 在售二手房最多
 
