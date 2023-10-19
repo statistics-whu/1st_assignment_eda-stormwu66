@@ -42,11 +42,11 @@ library(showtext)
 
 # 主要发现
 
-1.  从小区上看 东立国际小区 在售二手房最多，从地区上看 白沙洲地区 在售二手房最多
+1.  从小区上看，东立国际小区在售二手房最多。从地区上看，白沙洲地区 在售二手房最多。地区二手房数量高，其各个小区二手房数量不一定高。
 
-2.  从房屋总价和房屋面积上看，房屋总价和面积总体是正比例增长，但也有短暂下降，例如白沙洲
+2.  从房屋总价和房屋面积上看，房屋总价和面积总体是正比例增长，但也有短暂下降，例如白沙洲。
 
-3.  从地区与房屋单价上看，光谷东的房屋单价 跨度最广 普遍比其他要高 青山有高异常房屋单价
+3.  从地区与房屋单价上看，光谷东的房屋单价跨度最广，普遍比其他要高，青山有高异常房屋单价。
 
 # 数据介绍
 
@@ -118,40 +118,81 @@ summary(lj)
 
 可以看到：
 
--   房屋总价最小10.6万元，最大1380万元，中间值137万元，平方米价格最小1771元/平方米，最大44656元/平方米
+-   房屋总价最小10.6万元，最大1380万元，中间值137万元，平方米价格最小1771元/平方米，最大44656元/平方米。
 
--   房间卧室个数分布 3室最多 7室最少 客厅个数 2客厅最多 4客厅最小 总体面积 最小22.77 最大588.66
+-   房间卧室个数分布，3室最多，7室最少。客厅个数，2客厅最多，4客厅最小，总体面积：最小22.77 最大588.66。
 
--   房间装修 精准最多 板楼最多 主要朝向南最多 次要朝向北最多 
+-   房间装修精准最多，板楼最多，主要朝向南最多，次要朝向北最多 。
 
 # 探索性分析
 
-## 变量1的数值描述与图形
+## 变量property_name的数值描述与图形
 
 ```{r}
 #小区 分布情况
 property_name_data <- lj %>% group_by(property_name) %>% summarise(count = n()) %>% arrange(desc(count))
 property_name_data
+property_name_top10 <- property_name_data %>% filter(row_number() <= 10)
+property_name_top10
 summary(property_name_data$count)
+ggplot(filter(lj,property_name %in% property_name_top10$property_name)) + geom_bar(aes(x=property_name))
+```
 
+发现：
+
+-   共有1345个小区在售二手房，其中东立国际小区在售二手房最多，有22间，最少小区仅一间二手房 大部分小区有1-3间二手房出售 平均每个小区有2.23间 。
+
+-   前10排名的小区至少有12间二手房出售。
+
+## 变量property_region的数值描述与图形
+
+```{r}
 property_region_data <- lj %>% group_by(property_region) %>% summarise(count = n()) %>% arrange(desc(count)) 
 property_region_data
 
 summary(property_region_data$count)
 # 选出总数前10的区域
-top10 <- property_region_data %>% filter(row_number() <= 10)
+property_region_top10 <- property_region_data %>% filter(row_number() <= 10)
+property_region_top10
+ggplot(filter(lj,property_region %in% property_region_top10$property_region)) + geom_bar(aes(x=property_region))
 ```
 
 发现：
 
--   东立国际小区 在售二手房最多 22 最少小区仅一间二手房 大部分小区有1-3间二手房出售 平均每个小区有2.23间 
+-   共有87个地区在售二手房，白沙洲地区在售二手房最多，有167间。最少地区仅一间二手房，平均每个地区有34间。 
 
--   白沙洲地区 在售二手房最多 167 最少地区仅一间二手房 平均每个地区有34.48间 
+-   排名前10的地区最少也有67间在售二手房。
 
-## 变量2的数值描述与图形
+## 变量price_sqm的数值描述与图形
 
 ```{r}
-top10_price <- lj %>% filter(property_region %in% top10$property_region)
+summary(lj$price_sqm)
+ggplot(lj) + geom_histogram(aes(x=price_sqm))
+```
+
+发现：
+
+-   房屋单价最小1771，最大44656，平均值15148。
+
+-   房屋单价集中在10799到18211之间。
+
+## 探索问题 地区，小区在售二手分布趋势
+```{r}
+property_region_name_data <- lj %>% group_by(property_region,property_name) %>% summarise(count = n()) %>% arrange(desc(count)) 
+property_name_data
+property_region_name_data
+```
+
+
+发现：
+
+-   二七地区的东立国际小区在售二手房最多高达22，二七地区不在地区二手房前10。
+
+-   地区二手房数量高，其各个小区不一定高例如白沙洲地区数量最高，其小区数量甚至没有前10。
+
+## 探索问题 在售数量前10 不同地区 相同面积下 地区与房屋总价之间的关系
+```{r}
+top10_price <- lj %>% filter(property_region %in% property_region_top10$property_region)
 top10_price
 
 ggplot(filter(top10_price,price_ttl < quantile(price_ttl,0.9)),aes(x = building_area,y = price_ttl)) + geom_smooth(na.rm = TRUE,aes(color=property_region),se = FALSE) 
@@ -159,51 +200,28 @@ ggplot(filter(top10_price,price_ttl < quantile(price_ttl,0.9)),aes(x = building_
 ggplot(filter(top10_price,price_ttl < quantile(price_ttl,0.9)),aes(x = building_area,y = price_ttl)) + geom_smooth(na.rm = TRUE) + facet_wrap(~ property_region,nrow = 3)
 ```
 
+
 发现：
 
--   房屋总价和面积总体是正比例增长，但也有短暂下降，并不总是面积越大房价越高 例如白沙洲 地区二手房面积到达一定后 房价确不升反降 说明同一地区 除开房屋面积 还有其他因素对房价有影响
+-   房屋总价和面积总体是正比例增长，但也有短暂下降，并不总是面积越大房价越高，例如白沙洲。
 
--   75平方米内相同面积房屋 后湖房屋总价最高 75往后 相同面积房屋 塔子湖的房屋总价最高
+-   75平方米内相同面积房屋，后湖房屋总价最高。75往后相同面积房屋，塔子湖的房屋总价最高。
 
-## 变量price_sqm的数值描述与图形
-
+## 探索问题 在售数量前10 不同地区 各自房屋单价走向
 ```{r}
 # 选出总数前10的区域
 ggplot(top10_price,aes(x = property_region,y = price_sqm)) + geom_boxplot()
 ```
 
-发现：
-
--   盘龙城房屋单价最低 中位数也是最低 金银湖第二低  光谷东的中位数 最高 其次是塔子湖
-
--   光谷东的房屋单价 跨度最多 普遍价格比其他要高 青山有高异常房屋单价
-
-## 探索问题 小区 地区 在售二手房分布趋势
 
 发现：
 
--   东立国际小区 在售二手房最多 22 最少小区仅一间二手房 大部分小区有1-3间二手房出售 平均每个小区有2.23间 
+-   盘龙城房屋单价最低，中位数也是最低，金银湖第二低。光谷东的中位数最高，其次是塔子湖。
 
--   白沙洲地区 在售二手房最多 167 最少地区仅一间二手房 平均每个地区有34.48间 
-
-## 探索问题 不同地区 相同面积下 地区与房屋总价之间的关系
-
-发现：
-
--   房屋总价和面积总体是正比例增长，但也有短暂下降，并不总是面积越大房价越高 例如白沙洲 地区二手房面积到达一定后 房价确不升反降 说明同一地区 除开房屋面积 还有其他因素对房价有影响
-
--   75平方米内相同面积房屋 后湖房屋总价最高 75往后 相同面积房屋 塔子湖的房屋总价最高
-
-## 探索问题 不同地区 各自房屋单价走向
-
-发现：
-
--   盘龙城房屋单价最低 中位数也是最低 金银湖第二低  光谷东的中位数 最高 其次是塔子湖
-
--   光谷东的房屋单价 跨度最多 普遍价格比其他要高 青山有高异常房屋单价
+-   光谷东的房屋单价跨度最多，普遍价格比其他要高，青山有高异常房屋单价。
 
 ------------------------------------------------------------------------
 
 # 发现总结
 
-二手房主要分布在白沙洲,盘龙城,四新,光谷东,金银湖,后湖,青山等地区。房屋总价和面积总体是正比例增长，但也有短暂下降，相同面积下，塔子湖房屋总价要高。不同地区，房屋单价分布不同，光谷东的房屋单价 跨度最多 普遍价格比其他要高 青山有高异常房屋单价。
+二手房主要分布在白沙洲,盘龙城,四新,光谷东,金银湖,后湖,青山等地区，地区二手房最多不代表各个小区的二手房也最多。房屋总价和面积总体是正比例增长，但也有短暂下降，说明还有其他因素影响房屋总价。不同地区，房屋单价分布不同，光谷东的房屋单价跨度最多，从总体来看盘龙城房屋单价和房屋总价都比较低，适合对地区要求不高的人购买。
